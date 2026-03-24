@@ -1,0 +1,157 @@
+{
+  "entities": {
+    "Center": {
+      "title": "Center",
+      "description": "Educational center or school campus",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "facilities": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["name"]
+    },
+    "User": {
+      "title": "User",
+      "description": "System user (Admin, Staff, Teacher, Student)",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff", "teacher", "student"] },
+        "centerId": { "type": "string" },
+        "xp": { "type": "integer" },
+        "level": { "type": "integer" },
+        "avatarUrl": { "type": "string" },
+        "achievements": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["email", "role"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Question bank item",
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "difficulty": { "type": "string", "enum": ["NB", "TH", "VD", "VDC"] },
+        "type": { "type": "string", "enum": ["single_choice", "multiple_choice", "true_false", "fill_blank", "matching", "drag_drop", "essay"] },
+        "content": { "type": "string", "description": "LaTeX supported content" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctAnswer": { "type": "string" },
+        "matchingPairs": { "type": "object", "description": "For matching type" }
+      },
+      "required": ["subject", "difficulty", "content", "type"]
+    },
+    "Exam": {
+      "title": "Exam",
+      "description": "Generated or manual exam",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "sections": { 
+          "type": "array", 
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "type": { "type": "string", "enum": ["objective", "essay"] },
+              "questionIds": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "duration": { "type": "integer", "description": "Minutes" },
+        "passScore": { "type": "integer" },
+        "shuffle": { "type": "boolean" },
+        "maxQuestions": { "type": "string", "enum": ["1", "5", "all"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "sections"]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "Educational game session",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["car_race", "yacht_race", "rabbit_home", "obstacle_course"] },
+        "examId": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "examId"]
+    },
+    "ExamResult": {
+      "title": "ExamResult",
+      "description": "Student's exam submission",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string" },
+        "examId": { "type": "string" },
+        "score": { "type": "number" },
+        "xpEarned": { "type": "integer" },
+        "answers": { "type": "object" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentId", "examId", "score"]
+    },
+    "Badge": {
+      "title": "Badge",
+      "description": "Gamification badge",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "condition": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Daily or event mission",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "xpReward": { "type": "integer" },
+        "type": { "type": "string", "enum": ["daily", "event"] }
+      },
+      "required": ["title", "xpReward"]
+    },
+    "ShopItem": {
+      "title": "ShopItem",
+      "description": "Item in the XP shop",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "costXp": { "type": "integer" },
+        "type": { "type": "string", "enum": ["physical", "virtual"] }
+      },
+      "required": ["name", "costXp"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Educational category (Class, Subject, etc.)",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["class", "subject"] },
+        "parentId": { "type": "string", "description": "For subcategories" }
+      },
+      "required": ["name", "type"]
+    }
+  },
+  "firestore": {
+    "/centers/{centerId}": { "schema": "Center", "description": "List of centers" },
+    "/users/{userId}": { "schema": "User", "description": "System users" },
+    "/questions/{questionId}": { "schema": "Question", "description": "Question bank" },
+    "/exams/{examId}": { "schema": "Exam", "description": "Exams" },
+    "/examResults/{resultId}": { "schema": "ExamResult", "description": "Student results" },
+    "/badges/{badgeId}": { "schema": "Badge", "description": "Available badges" },
+    "/missions/{missionId}": { "schema": "Mission", "description": "Available missions" },
+    "/shopItems/{itemId}": { "schema": "ShopItem", "description": "Shop items" },
+    "/categories/{categoryId}": { "schema": "Category", "description": "Classes and Subjects" }
+  }
+}

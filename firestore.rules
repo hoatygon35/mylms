@@ -1,0 +1,159 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: centers
+// Document ID: centerId
+// Fields:
+//   - name: string (required)
+//   - address: string (optional)
+//   - facilities: list (optional)
+//
+// Collection: users
+// Document ID: userId (Firebase Auth UID)
+// Fields:
+//   - email: string (required, format: email)
+//   - displayName: string (required)
+//   - role: string (required, enum: ["admin", "staff", "teacher", "student"])
+//   - centerId: string (optional)
+//   - xp: integer (required)
+//   - level: integer (required)
+//   - avatarUrl: string (optional)
+//   - achievements: list (optional)
+//
+// Collection: questions
+// Document ID: questionId
+// Fields:
+//   - subject: string (required)
+//   - topic: string (optional)
+//   - difficulty: integer (required, enum: [1, 2, 3, 4])
+//   - type: string (required, enum: ["mcq", "short_answer", "fill_blank"])
+//   - content: string (required)
+//   - options: list (optional)
+//   - correctAnswer: string (optional)
+//
+// Collection: exams
+// Document ID: examId
+// Fields:
+//   - title: string (required)
+//   - matrix: map (optional)
+//   - questionIds: list (required)
+//   - duration: integer (optional)
+//   - createdAt: timestamp (required)
+//
+// Collection: categories
+// Document ID: categoryId
+// Fields:
+//   - name: string (required)
+//   - type: string (required, enum: ["class", "subject"])
+//   - parentId: string (optional)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "vandungldc@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isStaff() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' || isAdmin());
+    }
+
+    function isTeacher() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' || isStaff());
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['id', 'email', 'displayName', 'role', 'centerId', 'xp', 'level', 'avatarUrl', 'achievements', 'badges']) &&
+             data.email is string && isValidEmail(data.email) &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.role in ['admin', 'staff', 'teacher', 'student'] &&
+             data.xp is int && data.xp >= 0 &&
+             data.level is int && data.level >= 1;
+    }
+
+    function isValidQuestion(data) {
+      return hasRequiredFields(['subject', 'difficulty', 'content', 'type']) &&
+             data.subject is string && data.subject.size() < 100 &&
+             data.difficulty in ['NB', 'TH', 'VD', 'VDC'] &&
+             data.type in ['single_choice', 'multiple_choice', 'true_false', 'fill_blank', 'matching', 'drag_drop', 'essay'] &&
+             data.content is string && data.content.size() < 5000;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && request.resource.data.role == 'student' || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+    }
+
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    match /exams/{examId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    match /games/{gameId} {
+      allow read: if isAuthenticated();
+      allow write: if isTeacher();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    match /centers/{centerId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
