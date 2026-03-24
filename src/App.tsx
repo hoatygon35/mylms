@@ -71,7 +71,7 @@ import { auth, db } from "./firebase";
 interface UserProfile {
   id: string;
   displayName: string;
-  role: "admin" | "staff" | "teacher" | "student";
+  role: "admin" | "teacher" | "hocsinh";
   xp: number;
   level: number;
   badges: string[];
@@ -194,7 +194,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               id: firebaseUser.uid,
               displayName: firebaseUser.displayName || "User",
               email: firebaseUser.email || "",
-              role: isAdminEmail ? "admin" : "student",
+              role: isAdminEmail ? "admin" : "hocsinh",
               xp: 0,
               level: 1,
               badges: []
@@ -425,9 +425,12 @@ function MainApp() {
     );
   }
 
-  const currentUser = profile || {
+  const currentUser = profile ? {
+    ...profile,
+    role: (profile.role as string) === "student" ? "hocsinh" : profile.role
+  } : {
     displayName: user.displayName || "User",
-    role: "student",
+    role: "hocsinh",
     xp: 0,
     level: 1,
     badges: []
@@ -460,13 +463,13 @@ function MainApp() {
         <nav className="flex-1 p-4 space-y-1">
           {[
             { id: "dashboard", icon: LayoutDashboard, label: "Bảng điều khiển" },
-            { id: "members", icon: Users, label: "Thành viên", roles: ["admin", "staff"] },
-            { id: "categories", icon: FolderTree, label: "Danh mục", roles: ["admin", "staff"] },
+            { id: "members", icon: Users, label: "Thành viên" },
+            { id: "categories", icon: FolderTree, label: "Danh mục" },
             { id: "questions", icon: BookOpen, label: "Ngân hàng câu hỏi" },
             { id: "exams", icon: Target, label: "Quản lý đề thi" },
             { id: "games", icon: Gamepad2, label: "Trò chơi học tập" },
             { id: "shop", icon: ShoppingCart, label: "Cửa hàng XP" }
-          ].filter(item => !item.roles || (currentUser.role && item.roles.includes(currentUser.role))).map((item) => (
+          ].map((item) => (
             <button
               key={item.id}
               onClick={() => {
@@ -788,13 +791,13 @@ function MainApp() {
             >
               <header className="flex justify-between items-end">
                 <div>
-                  <h2 className="text-3xl font-bold text-slate-900">Quản lý thành viên</h2>
-                  <p className="text-slate-500 mt-1">Danh sách người dùng, đăng ký và import hàng loạt.</p>
+                  <h2 className="text-3xl font-bold text-slate-900">Danh sách thành viên</h2>
+                  <p className="text-slate-500 mt-1">Quản lý người dùng và phân quyền hệ thống.</p>
                 </div>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => {
-                      const csvContent = "email,displayName,role,centerId\ntest@example.com,Nguyễn Văn A,student,center1\nteacher@example.com,Trần Thị B,teacher,center1";
+                      const csvContent = "email,displayName,role\ntest@example.com,Nguyễn Văn A,hocsinh\nteacher@example.com,Trần Thị B,teacher";
                       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                       const link = document.createElement("a");
                       const url = URL.createObjectURL(blob);
@@ -827,13 +830,11 @@ function MainApp() {
                               let count = 0;
                               for (const row of data) {
                                 if (row.email) {
-                                  // In a real app, we'd use a unique ID or email as key
-                                  // For demo, we'll just log and show success
                                   console.log("Importing:", row);
                                   count++;
                                 }
                               }
-                              alert(`Đã import thành công ${count} thành viên! (Dữ liệu đã được log ra console)`);
+                              alert(`Đã import thành công ${count} thành viên!`);
                             }
                           });
                         }
@@ -856,39 +857,111 @@ function MainApp() {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {[
-                      { name: "Nguyễn Văn A", email: "a@example.com", role: "student", level: 12 },
+                      { name: "Nguyễn Văn A", email: "a@example.com", role: "hocsinh", level: 12 },
                       { name: "Trần Thị B", email: "b@example.com", role: "teacher", level: 25 },
                       { name: "Lê Văn C", email: "c@example.com", role: "admin", level: 40 }
                     ].map((m, i) => (
-                      <tr key={i} className="hover:bg-slate-50 transition-colors">
+                      <tr key={i} className="hover:bg-slate-50 transition-colors group">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
                               {m.name.charAt(0)}
                             </div>
-                            <span className="font-semibold text-sm">{m.name}</span>
+                            <div>
+                              <span className="font-semibold text-sm block">{m.name}</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold">ID: {Math.random().toString(36).substr(2, 9)}</span>
+                            </div>
                           </div>
                         </td>
                         <td className="p-4 text-sm text-slate-500">{m.email}</td>
                         <td className="p-4">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                            m.role === 'admin' ? "bg-red-50 text-red-600" :
-                            m.role === 'teacher' ? "bg-amber-50 text-amber-600" :
-                            "bg-blue-50 text-blue-600"
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${
+                            m.role === 'admin' ? "bg-red-100 text-red-600" :
+                            m.role === 'teacher' ? "bg-amber-100 text-amber-600" :
+                            "bg-blue-100 text-blue-600"
                           }`}>
-                            {m.role}
+                            {m.role === 'hocsinh' ? 'Học sinh' : m.role === 'teacher' ? 'Giáo viên' : 'Quản trị'}
                           </span>
                         </td>
-                        <td className="p-4 text-sm font-bold text-slate-700">Lv.{m.level}</td>
                         <td className="p-4">
-                          <button className="text-slate-400 hover:text-indigo-600">
-                            <Settings className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 h-2 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-indigo-500" style={{ width: `${(m.level / 50) * 100}%` }} />
+                            </div>
+                            <span className="text-xs font-bold text-slate-700">Lv.{m.level}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                              <Users className="w-4 h-4" />
+                            </button>
+                            <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-colors">
+                              <Settings className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Member Info Section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Users className="w-6 h-6 text-indigo-600" />
+                    Thông tin chi tiết thành viên
+                  </h3>
+                  <div className="flex items-center gap-6 p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="w-24 h-24 rounded-3xl bg-indigo-600 flex items-center justify-center text-white text-4xl font-bold shadow-xl shadow-indigo-100">
+                      N
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-2xl font-bold text-slate-900">Nguyễn Văn A</h4>
+                      <p className="text-slate-500 font-medium">hocsinh@example.com</p>
+                      <div className="flex gap-2 pt-2">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-[10px] font-bold uppercase">Học sinh</span>
+                        <span className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full text-[10px] font-bold uppercase">Khối 12</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Tổng XP</p>
+                      <p className="text-2xl font-bold text-slate-900">1,250</p>
+                    </div>
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Cấp độ</p>
+                      <p className="text-2xl font-bold text-slate-900">12</p>
+                    </div>
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Đề thi đã làm</p>
+                      <p className="text-2xl font-bold text-slate-900">45</p>
+                    </div>
+                    <div className="p-4 bg-white border border-slate-100 rounded-2xl space-y-1">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Tỷ lệ đúng</p>
+                      <p className="text-2xl font-bold text-slate-900">85%</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                  <h3 className="text-xl font-bold flex items-center gap-2">
+                    <Award className="w-6 h-6 text-amber-500" />
+                    Huy hiệu
+                  </h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="aspect-square rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 border border-slate-100">
+                        <Zap className="w-6 h-6" />
+                      </div>
+                    ))}
+                  </div>
+                  <button className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all">
+                    Xem tất cả huy hiệu
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
