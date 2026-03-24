@@ -13,12 +13,12 @@
     },
     "User": {
       "title": "User",
-      "description": "System user (Admin, Staff, Teacher, Student)",
+      "description": "System user (Admin, Teacher, Student)",
       "type": "object",
       "properties": {
         "email": { "type": "string", "format": "email" },
         "displayName": { "type": "string" },
-        "role": { "type": "string", "enum": ["admin", "staff", "teacher", "student"] },
+        "role": { "type": "string", "enum": ["admin", "teacher", "hocsinh"] },
         "centerId": { "type": "string" },
         "xp": { "type": "integer" },
         "level": { "type": "integer" },
